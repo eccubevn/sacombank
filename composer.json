@@ -1,0 +1,13 @@
+{
+  "name": "ec-cube/Sacombank",
+  "version": "1.0.0",
+  "description": "Sacombank",
+  "type": "eccube-plugin",
+  "require": {
+    "ec-cube/plugin-installer": "~0.0.7",
+    "cybersource/sdk-php": "*"
+  },
+  "extra": {
+    "code": "Sacombank"
+  }
+}
