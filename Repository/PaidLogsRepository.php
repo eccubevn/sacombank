@@ -4,7 +4,6 @@ namespace Plugin\Sacombank\Repository;
 use Plugin\Sacombank\Entity\PaidLogs;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 use Eccube\Repository\AbstractRepository;
-use Symfony\Component\HttpFoundation\Request;
 
 class PaidLogsRepository extends AbstractRepository
 {
@@ -31,15 +30,30 @@ class PaidLogsRepository extends AbstractRepository
 
     /**
      * @param $Order
-     * @param $postData
+     * @param $params
      * @throws \Doctrine\ORM\ORMException
      */
-    public function saveLogs($Order, $postData)
+    public function savePayLogs($Order, $params)
     {
         $PaidLog = new PaidLogs();
         $PaidLog->setOrder($Order);
-        $PaidLog->setPaidInformation(json_encode($postData));
+        $PaidLog->setPayInformation(json_encode($params));
         $PaidLog->setCreatedAt(new \DateTime());
         $this->getEntityManager()->persist($PaidLog);
+        $this->getEntityManager()->flush($PaidLog);
+    }
+
+    /**
+     * @param $Order
+     * @param $params
+     * @throws \Doctrine\ORM\ORMException
+     */
+    public function savePaidLogs($Order, $params)
+    {
+        $PaidLog = $this->findOneBy(['Order' => $Order]);
+        $PaidLog->setPaidInformation(json_encode($params));
+        $PaidLog->setUpdatedAt(new \DateTime());
+        $this->getEntityManager()->persist($PaidLog);
+        $this->getEntityManager()->flush($PaidLog);
     }
 }

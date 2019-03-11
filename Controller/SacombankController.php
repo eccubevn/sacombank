@@ -89,7 +89,7 @@ class SacombankController extends AbstractController
             throw new NotFoundHttpException();
         }
 
-        $this->paidLogsRepository->saveLogs($Order, $_POST);
+        $this->paidLogsRepository->savePaidLogs($Order, $_POST);
 
         if ($this->getUser() != $Order->getCustomer()) {
             throw new NotFoundHttpException();

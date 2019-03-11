@@ -5,6 +5,7 @@ namespace Plugin\Sacombank\Form\Type\Admin;
 use Eccube\Common\EccubeConfig;
 use Plugin\Sacombank\Entity\Config;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -48,13 +49,13 @@ class ConfigType extends AbstractType
                 ],
             ])
             ->add('profile_id', TextType::class, [
-                'label' => trans('Sacombank.config.merchant_access_code.label'),
+                'label' => trans('Sacombank.config.profile_id.label'),
                 'constraints' => [
                     new NotBlank(),
                     new Length(['max' => $this->eccubeConfig->get('eccube_stext_len')]),
                 ],
             ])
-            ->add('secret', TextType::class, [
+            ->add('secret', TextareaType::class, [
                 'label' => trans('Sacombank.config.secret.label'),
                 'constraints' => [
                     new NotBlank(),

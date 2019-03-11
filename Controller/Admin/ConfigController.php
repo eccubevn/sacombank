@@ -40,7 +40,7 @@ class ConfigController extends AbstractController
             $Config = $form->getData();
             $this->entityManager->persist($Config);
             $this->entityManager->flush($Config);
-            $this->addSuccess('登録しました。', 'admin');
+            $this->addSuccess('admin.common.save_complete', 'admin');
 
             return $this->redirectToRoute('sacombank_admin_config');
         }

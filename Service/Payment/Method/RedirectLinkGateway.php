@@ -5,19 +5,14 @@ namespace Plugin\Sacombank\Service\Payment\Method;
 use Eccube\Common\EccubeConfig;
 use Eccube\Repository\OrderRepository;
 use Plugin\Sacombank\Entity\Config;
+use Plugin\Sacombank\Repository\PaidLogsRepository;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Eccube\Service\Payment\PaymentMethodInterface;
 use Eccube\Service\Payment\PaymentResult;
-use Eccube\Service\Payment\PaymentDispatcher;
 use Eccube\Repository\Master\OrderStatusRepository;
 use Eccube\Service\PurchaseFlow\PurchaseFlow;
-use Eccube\Entity\Master\OrderStatus;
-use Eccube\Service\PurchaseFlow\PurchaseContext;
 use Plugin\Sacombank\Repository\ConfigRepository;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Validator\Constraints\Date;
 
 abstract class RedirectLinkGateway implements PaymentMethodInterface
 {
@@ -57,6 +52,11 @@ abstract class RedirectLinkGateway implements PaymentMethodInterface
     protected $SacomConfig;
 
     /**
+     * @var PaidLogsRepository
+     */
+    protected $PaidLogsRepo;
+
+    /**
      * @var EccubeConfig
      */
     protected $eccubeConfig;
@@ -72,6 +72,7 @@ abstract class RedirectLinkGateway implements PaymentMethodInterface
      * @param OrderStatusRepository $orderStatusRepository
      * @param PurchaseFlow $shoppingPurchaseFlow
      * @param ConfigRepository $configRepository
+     * @param PaidLogsRepository $paidLogsRepository
      * @param EccubeConfig $eccubeConfig
      * @param OrderRepository $orderRepository
      * @param ContainerInterface $container
@@ -80,6 +81,7 @@ abstract class RedirectLinkGateway implements PaymentMethodInterface
         OrderStatusRepository $orderStatusRepository,
         PurchaseFlow $shoppingPurchaseFlow,
         ConfigRepository $configRepository,
+        PaidLogsRepository $paidLogsRepository,
         EccubeConfig $eccubeConfig,
         OrderRepository $orderRepository,
         ContainerInterface $container
@@ -87,6 +89,7 @@ abstract class RedirectLinkGateway implements PaymentMethodInterface
         $this->orderStatusRepository = $orderStatusRepository;
         $this->purchaseFlow = $shoppingPurchaseFlow;
         $this->SacomConfig = $configRepository->get();
+        $this->PaidLogsRepo = $paidLogsRepository;
         $this->eccubeConfig = $eccubeConfig;
         $this->orderRepository = $orderRepository;
         $this->container = $container;
@@ -116,92 +119,6 @@ abstract class RedirectLinkGateway implements PaymentMethodInterface
         $result->setSuccess(true);
 
         return $result;
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @return PaymentDispatcher
-     * @throws \Eccube\Service\PurchaseFlow\PurchaseException
-     */
-    public function apply()
-    {
-        $OrderStatus = $this->orderStatusRepository->find(OrderStatus::PENDING);
-        $this->Order->setOrderStatus($OrderStatus);
-
-        $this->purchaseFlow->prepare($this->Order, new PurchaseContext());
-
-        $html = $this->getHtmlContent();
-        $response = new Response();
-        $response->setContent($html);
-
-        $dispatcher = new PaymentDispatcher();
-        $dispatcher->setResponse($response);
-
-        return $dispatcher;
-    }
-
-    public function getHtmlContent()
-    {
-        $params = [
-            'access_key' => $this->SacomConfig->getAccessKey(),
-            'profile_id' => $this->SacomConfig->getProfileId(),
-            'transaction_uuid' => $this->Order->getPreOrderId(),
-            'signed_field_names' => 'access_key,profile_id,transaction_uuid,signed_field_names,unsigned_field_names,signed_date_time,locale,transaction_type,reference_number,amount,currency,bill_to_forename,bill_to_surname,bill_to_email,bill_to_address_line1,bill_to_address_city,bill_to_address_country,bill_state',
-            'unsigned_field_names' => '',
-            'signed_date_time' => gmdate("Y-m-d\TH:i:s\Z"),
-            'locale' => 'vn',
-            'transaction_type' => 'authorization',
-            'reference_number' =>(new \DateTime())->getTimestamp(),
-            'amount' => $this->Order->getTotal(),
-            'currency' => 'VND',
-            'bill_to_forename' => 'Alan',
-            'bill_to_surname' => 'Smith',
-            'bill_to_email' => 'joesmith@example.com',
-            'bill_to_address_line1' => '1 My Apartment',
-            'bill_to_address_city' => 'Mountain View',
-            'bill_to_address_country' => 'VN',
-            'bill_state' => 'HCM',
-        ];
-
-        $html = '';
-        $html .= '<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>';
-        $html .= '<script type="text/javascript">';
-        $html .= '$(document).ready(function() {';
-        $html .= '$("input#submit").click();';
-        $html .= '});';
-        $html .= '</script>';
-
-        $html .= '<form id="scb_payment_confirmation" action="'.$this->getCallUrl().'" method="post">';
-        foreach($params as $name => $value) {
-            $html .= "<input type=\"hidden\" id=\"" . $name . "\" name=\"" . $name . "\" value=\"" . $value . "\"/>\n";
-        }
-        $html .= "<input type=\"hidden\" id=\"signature\" name=\"signature\" value=\"" . $this->sign($params) . "\"/>\n";
-        $html.= '<input type="submit" id="submit" value="Đang chuyển trang..." style="border: 0; background: none">';
-        $html.= '</form>';
-
-        return $html;
-    }
-
-    public function sign($params)
-    {
-        return $this->signData($this->buildDataToSign($params), $this->SacomConfig->getSecret());
-    }
-
-    public function signData($data, $secretKey) {
-        return base64_encode(hash_hmac('sha256', $data, $secretKey, true));
-    }
-
-    public function buildDataToSign($params) {
-        $signedFieldNames = explode(",",$params["signed_field_names"]);
-        foreach ($signedFieldNames as $field) {
-            $dataToSign[] = $field . "=" . $params[$field];
-        }
-        return $this->commaSeparate($dataToSign);
-    }
-
-    public function commaSeparate ($dataToSign) {
-        return implode(",",$dataToSign);
     }
 
     /**

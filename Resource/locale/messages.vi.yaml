@@ -1,8 +1,11 @@
 Sacombank.config.call_url.label: Địa chỉ xử lý thanh toán
 Sacombank.config.access_key.label: Access key
 Sacombank.config.profile_id.label: Profile ID
-Sacombank.config.secret:.label: Secrect
+Sacombank.config.secret.label: Secrect
 Sacombank.admin.order.title: Thanh toán
 
-Sacombank.response.credit.msg.reasonCode_default: Lỗi...
-Sacombank.response.credit.msg.reasonCode_100: Lỗi...
+Sacombank.response.credit.msg.reasonCode_default: Lỗi giao dịch.
+Sacombank.response.credit.msg.successful_transaction: Giao dịch thành công.
+Sacombank.response.credit.msg.authorization_was_declined: Ủy quyền bị từ chối.
+Sacombank.response.credit.msg.transaction_was_declined: Giao dịch bị từ chối.
+Sacombank.response.credit.msg.access_denied: 'Lỗi: truy cập bị từ chối hoặc không tìm thấy trang hoặc lỗi máy chủ.'

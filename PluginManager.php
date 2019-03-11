@@ -93,7 +93,7 @@ class PluginManager extends AbstractPluginManager
             $Payment->setCharge(0);
             $Payment->setSortNo($sortNo);
             $Payment->setVisible(false);
-            $Payment->setMethod('Sacombank - thanh toán bằng thẻ quốc tế');
+            $Payment->setMethod('Thanh toán bằng thẻ quốc tế');
             $Payment->setMethodClass(LinkCreditCard::class);
         }
         $entityManager->persist($Payment);

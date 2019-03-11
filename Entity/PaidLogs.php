@@ -31,9 +31,30 @@ class PaidLogs
     /**
      * @var string
      *
+     * @ORM\Column(name="pay_information", type="text", nullable=true)
+     */
+    protected $pay_information;
+
+    /**
+     * @var string
+     *
      * @ORM\Column(name="paid_information", type="text", nullable=true)
      */
     protected $paid_information;
+
+    /**
+     * @var \DateTime
+     *
+     * @ORM\Column(name="created_at", type="datetimetz", nullable=true)
+     */
+    protected $created_at;
+
+    /**
+     * @var \DateTime
+     *
+     * @ORM\Column(name="updated_at", type="datetimetz", nullable=true)
+     */
+    protected $updated_at;
 
     /**
      * @return int
@@ -65,6 +86,22 @@ class PaidLogs
     public function setOrder($Order)
     {
         $this->Order = $Order;
+    }
+
+    /**
+     * @return string
+     */
+    public function getPayInformation()
+    {
+        return $this->pay_information;
+    }
+
+    /**
+     * @param string $pay_information
+     */
+    public function setPayInformation($pay_information)
+    {
+        $this->pay_information = $pay_information;
     }
 
     /**
@@ -101,11 +138,18 @@ class PaidLogs
     }
 
     /**
-     * @var \DateTime
-     *
-     * @ORM\Column(name="created_at", type="datetimetz")
+     * @return \DateTime
      */
-    protected $created_at;
+    public function getUpdatedAt()
+    {
+        return $this->updated_at;
+    }
 
-
+    /**
+     * @param \DateTime $updated_at
+     */
+    public function setUpdatedAt($updated_at)
+    {
+        $this->updated_at = $updated_at;
+    }
 }

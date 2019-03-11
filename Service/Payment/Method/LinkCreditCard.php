@@ -1,10 +1,14 @@
 <?php
+
 namespace Plugin\Sacombank\Service\Payment\Method;
 
+use Eccube\Entity\Master\OrderStatus;
 use Eccube\Entity\Order;
+use Eccube\Service\Payment\PaymentDispatcher;
+use Eccube\Service\PurchaseFlow\PurchaseContext;
 use Plugin\Sacombank\Entity\Config;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\HttpFoundation\Response;
 
 class LinkCreditCard extends RedirectLinkGateway
 {
@@ -24,55 +28,133 @@ class LinkCreditCard extends RedirectLinkGateway
     }
 
     /**
+     * @return PaymentDispatcher
+     * @throws \Eccube\Service\PurchaseFlow\PurchaseException
+     */
+    public function apply()
+    {
+        $OrderStatus = $this->orderStatusRepository->find(OrderStatus::PENDING);
+        $this->Order->setOrderStatus($OrderStatus);
+
+        $this->purchaseFlow->prepare($this->Order, new PurchaseContext());
+
+        $html = $this->getHtmlContent();
+        $response = new Response();
+        $response->setContent($html);
+
+        $dispatcher = new PaymentDispatcher();
+        $dispatcher->setResponse($response);
+
+        return $dispatcher;
+    }
+
+    /**
+     * Create form, hidden fields and auto submit to Cybersource
+     *
+     * @return string
+     * @throws \Exception
+     */
+    protected function getHtmlContent()
+    {
+        $params = $this->getParameters();
+        $this->PaidLogsRepo->savePayLogs($this->Order, $params);
+
+        $html = '';
+        $html .= '<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>';
+        $html .= '<script type="text/javascript">';
+        $html .= '$(document).ready(function() {';
+        $html .= '$("input#submit").click();';
+        $html .= '});';
+        $html .= '</script>';
+
+        $html .= '<form id="scb_payment_confirmation" action="' . $this->getCallUrl() . '" method="post" style="text-align: center">';
+        foreach ($params as $name => $value) {
+            $html .= "<input type=\"hidden\" id=\"" . $name . "\" name=\"" . $name . "\" value=\"" . $value . "\"/>\n";
+        }
+        $html .= "<input type=\"hidden\" id=\"signature\" name=\"signature\" value=\"" . $this->sign($params) . "\"/>\n";
+        $html .= '<input type="submit" id="submit" value="Đang chuyển trang..." style="border: 0; background: none">';
+        $html .= '</form>';
+
+        return $html;
+    }
+
+    /**
+     * @param $params
+     * @return string
+     */
+    protected function sign($params)
+    {
+        return $this->signData($this->buildDataToSign($params), $this->SacomConfig->getSecret());
+    }
+
+    /**
+     * @param $data
+     * @param $secretKey
+     * @return string
+     */
+    protected function signData($data, $secretKey)
+    {
+        return base64_encode(hash_hmac('sha256', $data, $secretKey, true));
+    }
+
+    /**
+     * @param $params
+     * @return string
+     */
+    protected function buildDataToSign($params)
+    {
+        $signedFieldNames = explode(",", $params["signed_field_names"]);
+        foreach ($signedFieldNames as $field) {
+            $dataToSign[] = $field . "=" . $params[$field];
+        }
+        return $this->commaSeparate($dataToSign);
+    }
+
+    /**
+     * @param $dataToSign
+     * @return string
+     */
+    protected function commaSeparate($dataToSign)
+    {
+        return implode(",", $dataToSign);
+    }
+
+    /**
      * {@inheritdoc}
      *
      * @return string
      */
     public function getCallUrl()
     {
-        $vpcURL = $this->SacomConfig->getCallUrl();
-
-        return $vpcURL;
+        return $this->SacomConfig->getCallUrl();
     }
 
+    /**
+     * @return array
+     * @throws \Exception
+     */
     protected function getParameters()
     {
-        $Config = $this->SacomConfig;
-
         return [
-            'vpc_Merchant' => $Config->getCreditMerchantId(),
-            'vpc_AccessCode' => $Config->getCreditMerchantAccessCode(),
-            'vpc_MerchTxnRef' => $this->getTransactionId(), // transaction id
-            'vpc_OrderInfo' => $this->getOrderInfo(),
-            'vpc_Amount' => $this->Order->getTotal() * 100,
-            'vpc_ReturnURL' => $this->getReturnURL(),
-            'vpc_Version' => '2',
-            'vpc_Command' => 'pay',
-            'vpc_Locale' => 'en',
-            'vpc_TicketNo' => $_SERVER['REMOTE_ADDR'],
-            'AgainLink' => isset($_SERVER['HTTP_REFERER']) ? urlencode($_SERVER['HTTP_REFERER']) : null,
-            'Title' => 'VPC 3-Party',
-            'AVS_Street01' => $this->Order->getAddr02(),
-            'AVS_City' => $this->Order->getPref() ? $this->Order->getPref()->getName() : '',
-            'AVS_StateProv' => $this->Order->getAddr01(),
-            'AVS_PostCode' => $this->Order->getPostalCode(),
-            'AVS_Country' => 'VN',
-            'vpc_SHIP_Street01' => '39A Ngo Quyen',
-            'vpc_SHIP_Provice' => 'Hoan Kiem',
-            'vpc_SHIP_City' =>  'Ha Noi',
-            'vpc_SHIP_Country' => 'Viet Nam',
-            'vpc_Customer_Phone' => '840904280949',
-            'vpc_Customer_Email' => 'support@onepay.vn',
-            'vpc_Customer_Id' => 'thanhvt',
+            'access_key' => $this->SacomConfig->getAccessKey(),
+            'profile_id' => $this->SacomConfig->getProfileId(),
+            'transaction_uuid' => $this->getTransactionId(),
+            'signed_field_names' => 'access_key,profile_id,transaction_uuid,signed_field_names,unsigned_field_names,signed_date_time,locale,transaction_type,reference_number,amount,currency,bill_to_forename,bill_to_surname,bill_to_email,bill_to_address_line1,bill_to_address_city,bill_to_address_country,bill_state',
+            'unsigned_field_names' => '',
+            'signed_date_time' => gmdate("Y-m-d\TH:i:s\Z"),
+            'locale' => 'vn',
+            'transaction_type' => 'authorization',
+            'reference_number' => (new \DateTime())->getTimestamp(),
+            'amount' => $this->Order->getTotal(),
+            'currency' => 'VND',
+            'bill_to_forename' => 'Alan',
+            'bill_to_surname' => 'Smith',
+            'bill_to_email' => 'joesmith@example.com',
+            'bill_to_address_line1' => '1 My Apartment',
+            'bill_to_address_city' => 'Mountain View',
+            'bill_to_address_country' => 'VN',
+            'bill_state' => 'HCM',
         ];
-    }
-
-    protected function getReturnURL()
-    {
-        if ($this->isCheck){
-            return $this->container->get('router')->generate('onepay_admin_config_check', [], UrlGeneratorInterface::ABSOLUTE_URL);
-        }
-        return $this->container->get('router')->generate('onepay_back', [], UrlGeneratorInterface::ABSOLUTE_URL);
     }
 
     /**
@@ -82,73 +164,11 @@ class LinkCreditCard extends RedirectLinkGateway
      */
     protected function getTransactionId()
     {
-        if ($this->isCheck){
+        if ($this->isCheck) {
             return md5(date('dmYHis'));
         }
 
         return $this->Order->getPreOrderId();
-    }
-
-    /**
-     * Order info
-     *
-     * @return string
-     */
-    protected function getOrderInfo()
-    {
-        if ($this->isCheck){
-            return self::DOMESTIC_CHECK_ORDER_ID;
-        }
-
-        return str_pad($this->Order->getId(), 11, '0', STR_PAD_LEFT);
-    }
-
-    /**
-     * Get description of response code
-     *
-     * @param $responseCode
-     * @return string
-     */
-    public function getResponseCodeDescription($responseCode)
-    {
-        switch ($responseCode) {
-            case "100" :
-            case "102" :
-            case "104" :
-            case "110" :
-            case "150" :
-            case "151" :
-            case "152" :
-            case "200" :
-            case "201" :
-            case "202" :
-            case "203" :
-            case "204" :
-            case "205" :
-            case "207" :
-            case "208" :
-            case "210" :
-            case "211" :
-            case "221" :
-            case "222" :
-            case "230" :
-            case "231" :
-            case "232" :
-            case "233" :
-            case "234" :
-            case "236" :
-            case "240" :
-            case "475" :
-            case "481" :
-            case "520" :
-                $result = "Sacombank.response.credit.msg.reasonCode_".$responseCode;
-                break;
-
-            default  :
-                $result = "Sacombank.response.credit.msg.reasonCode_default";
-        }
-
-        return $result;
     }
 
     /**
@@ -159,11 +179,46 @@ class LinkCreditCard extends RedirectLinkGateway
      */
     public function handleRequest(Request $request)
     {
-//        $Config = $this->SacomConfig;
         $reasonCode = $request->get('reason_code');
-        $reason = $this->getResponseCodeDescription($reasonCode);
-        $result['status'] = $reason;
+        $result['message'] = $this->getResponseCodeDescription($reasonCode);
+
+        if ($reasonCode == 100) {
+            $result['status'] = 'success';
+        } else {
+            $result['status'] = 'error';
+        }
 
         return $result;
+    }
+
+    /**
+     * Get description of response code
+     *
+     * @param $responseCode
+     * @return string
+     */
+    protected function getResponseCodeDescription($responseCode)
+    {
+        if (in_array($responseCode, [100, 110])) {
+            // Giao dịch thành công
+            return trans("Sacombank.response.credit.msg.successful_transaction");
+        }
+
+        if (in_array($responseCode, [200, 201, 230, 520])) {
+            // Ủy quyền bị từ chối
+            return trans("Sacombank.response.credit.msg.authorization_was_declined");
+        }
+
+        if (in_array($responseCode, [102, 200, 202, 203, 204, 205, 207, 208, 210, 211, 221, 222, 231, 232, 233, 234, 236, 240, 475, 476, 481])){
+            // Giao dịch bị từ chối
+            return trans("Sacombank.response.credit.msg.transaction_was_declined");
+        }
+
+        if (in_array($responseCode, [104, 150, 151, 152])) {
+            // Lỗi: truy cập bị từ chối hoặc không tìm thấy trang hoặc lỗi máy chủ.
+            return trans("Sacombank.response.credit.msg.access_denied");
+        }
+
+        return trans("Sacombank.response.credit.msg.reasonCode_default");
     }
 }
