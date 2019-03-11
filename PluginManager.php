@@ -132,7 +132,7 @@ class PluginManager extends AbstractPluginManager
         /** @var PaymentRepository $paymentRepository */
         $paymentRepository = $this->container->get(PaymentRepository::class);
 
-        $Payments = $paymentRepository->findBy(['method_class' => [LinkCreditCard::class, LinkDomesticCard::class]]);
+        $Payments = $paymentRepository->findBy(['method_class' => [LinkCreditCard::class]]);
 
         /** @var DeliveryRepository $deliveryRepository */
         $deliveryRepository = $this->container->get(DeliveryRepository::class);
@@ -164,7 +164,7 @@ class PluginManager extends AbstractPluginManager
         /** @var PaymentRepository $paymentRepository */
         $paymentRepository = $this->container->get(PaymentRepository::class);
 
-        $Payments = $paymentRepository->findBy(['method_class' => [LinkCreditCard::class, LinkDomesticCard::class]]);
+        $Payments = $paymentRepository->findBy(['method_class' => [LinkCreditCard::class]]);
         $paymentIds = [];
         foreach ($Payments as $Payment) {
             $paymentIds[] = $Payment->getId();
