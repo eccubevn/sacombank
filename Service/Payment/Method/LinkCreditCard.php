@@ -3,30 +3,13 @@
 namespace Plugin\Sacombank\Service\Payment\Method;
 
 use Eccube\Entity\Master\OrderStatus;
-use Eccube\Entity\Order;
 use Eccube\Service\Payment\PaymentDispatcher;
 use Eccube\Service\PurchaseFlow\PurchaseContext;
-use Plugin\Sacombank\Entity\Config;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class LinkCreditCard extends RedirectLinkGateway
 {
-    /**
-     * @param Config $Config
-     * @return string
-     */
-    public function checkConn(Config $Config)
-    {
-        $this->isCheck = true;
-        $this->Order = new Order();
-        $this->Order->setTotal(10000);
-        $this->SacomConfig = $Config;
-        $url = $this->getCallUrl();
-
-        return $url;
-    }
-
     /**
      * @return PaymentDispatcher
      * @throws \Eccube\Service\PurchaseFlow\PurchaseException
@@ -146,12 +129,12 @@ class LinkCreditCard extends RedirectLinkGateway
             'transaction_type' => 'authorization',
             'reference_number' => (new \DateTime())->getTimestamp(),
             'amount' => $this->Order->getTotal(),
-            'currency' => 'VND',
-            'bill_to_forename' => 'Alan',
-            'bill_to_surname' => 'Smith',
-            'bill_to_email' => 'joesmith@example.com',
-            'bill_to_address_line1' => '1 My Apartment',
-            'bill_to_address_city' => 'Mountain View',
+            'currency' => $this->eccubeConfig->get('currency'),
+            'bill_to_forename' => $this->BaseInfo->getShopName(),
+            'bill_to_surname' => $this->BaseInfo->getShopName(),
+            'bill_to_email' => $this->BaseInfo->getEmail01(),
+            'bill_to_address_line1' => $this->BaseInfo->getAddr02(),
+            'bill_to_address_city' => $this->BaseInfo->getAddr01(),
             'bill_to_address_country' => 'VN',
             'bill_state' => 'HCM',
         ];

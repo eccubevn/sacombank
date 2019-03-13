@@ -2,8 +2,8 @@
 
 {% set menus = ['store', 'plugin', 'plugin_list'] %}
 
-{% block title %}Sacombank{% endblock %}
-{% block sub_title %}プラグイン一覧{% endblock %}
+{% block title %}{{ 'Sacombank.admin.config.title'|trans }}{% endblock %}
+{% block sub_title %}{{ 'Sacombank.admin.config.sub_title'|trans }}{% endblock %}
 
 {% form_theme form '@admin/Form/bootstrap_4_horizontal_layout.html.twig' %}
 

@@ -1,8 +1,10 @@
 Sacombank.config.call_url.label: Địa chỉ xử lý thanh toán
 Sacombank.config.access_key.label: Access key
 Sacombank.config.profile_id.label: Profile ID
-Sacombank.config.secret.label: Secrect
+Sacombank.config.secret.label: Secret
 Sacombank.admin.order.title: Thanh toán
+Sacombank.admin.config.title: "Phương thức thanh toán Sacombank"
+Sacombank.admin.config.sub_title: "Tùy chỉnh"
 
 Sacombank.response.credit.msg.reasonCode_default: Lỗi giao dịch.
 Sacombank.response.credit.msg.successful_transaction: Giao dịch thành công.

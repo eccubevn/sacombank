@@ -3,6 +3,7 @@
 namespace Plugin\Sacombank\Service\Payment\Method;
 
 use Eccube\Common\EccubeConfig;
+use Eccube\Repository\BaseInfoRepository;
 use Eccube\Repository\OrderRepository;
 use Plugin\Sacombank\Entity\Config;
 use Plugin\Sacombank\Repository\PaidLogsRepository;
@@ -62,6 +63,11 @@ abstract class RedirectLinkGateway implements PaymentMethodInterface
     protected $eccubeConfig;
 
     /**
+     * @var BaseInfoRepository
+     */
+    protected $BaseInfo;
+
+    /**
      * @var ContainerInterface
      */
     protected $container;
@@ -83,6 +89,7 @@ abstract class RedirectLinkGateway implements PaymentMethodInterface
         ConfigRepository $configRepository,
         PaidLogsRepository $paidLogsRepository,
         EccubeConfig $eccubeConfig,
+        BaseInfoRepository $BaseInfo,
         OrderRepository $orderRepository,
         ContainerInterface $container
     ) {
@@ -91,6 +98,7 @@ abstract class RedirectLinkGateway implements PaymentMethodInterface
         $this->SacomConfig = $configRepository->get();
         $this->PaidLogsRepo = $paidLogsRepository;
         $this->eccubeConfig = $eccubeConfig;
+        $this->BaseInfo = $BaseInfo->get();
         $this->orderRepository = $orderRepository;
         $this->container = $container;
     }
@@ -142,14 +150,6 @@ abstract class RedirectLinkGateway implements PaymentMethodInterface
         $this->Order = $Order;
         return $this;
     }
-
-    /**
-     * Check connect to Onepay input card page
-     *
-     * @param Config $Config
-     * @return mixed
-     */
-    abstract public function checkConn(Config $Config);
 
     /**
      * Generate url endpoint which will be redirect to process payment
